@@ -1,13 +1,26 @@
 [package]
 name = "gpui_apple"
 version = "0.1.0"
-edition.workspace = true
-publish.workspace = true
+edition = "2024"
+publish = false
 license = "Apache-2.0"
 
-[lints]
-workspace = true
+[lints.rust]
+unexpected_cfgs = { level = "allow" }
 
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+declare_interior_mutable_const = "deny"
+redundant_clone = "deny"
+disallowed_methods = "deny"
+style = { level = "allow", priority = -1 }
+type_complexity = "allow"
+let_underscore_future = "allow"
+single_range_in_vec_init = "allow"
+too_many_arguments = "allow"
+large_enum_variant = "allow"
+nonminimal_bool = "allow"
 [lib]
 path = "src/gpui_apple.rs"
 doctest = false
@@ -19,26 +32,23 @@ test-support = ["gpui/test-support"]
 runtime_shaders = []
 
 [dependencies]
-gpui.workspace = true
-
+gpui = { path = "../gpui", default-features = false }
 [target.'cfg(target_os = "macos")'.dependencies]
-anyhow.workspace = true
-block2.workspace = true
-cocoa.workspace = true
-core-foundation.workspace = true
-core-video.workspace = true
-derive_more.workspace = true
-etagere.workspace = true
-foreign-types.workspace = true
-image.workspace = true
-log.workspace = true
-metal.workspace = true
-objc.workspace = true
-objc2.workspace = true
-parking_lot.workspace = true
-
+anyhow = { version = "1.0.86" }
+block2 = { version = "0.6" }
+cocoa = { version = "=0.26.0" }
+core-foundation = { version = "0.10" }
+core-video = { version = "0.5.2", features = ["metal"] }
+derive_more = { version = "2.1.1", features = ["add", "add_assign", "deref", "deref_mut", "display", "from", "from_str", "mul", "mul_assign", "not"] }
+etagere = { version = "0.2" }
+foreign-types = { version = "0.5" }
+image = { version = "0.25.1", default-features = false, features = ["bmp", "dds", "exr", "ff", "gif", "hdr", "ico", "jpeg", "png", "pnm", "qoi", "rayon", "tga", "tiff", "webp"] }
+log = { version = "0.4.16", features = ["kv_unstable_serde", "serde"] }
+metal = { version = "0.33" }
+objc = { version = "0.2" }
+objc2 = { version = "0.6" }
+parking_lot = { version = "0.12.1" }
 [target.'cfg(target_os = "macos")'.build-dependencies]
-cbindgen.workspace = true
-
+cbindgen = { version = "0.28.0", default-features = false }
 [target.'cfg(target_os = "macos")'.dev-dependencies]
-gpui = { workspace = true, features = ["test-support"] }
+gpui = { path = "../gpui", default-features = false, features = ["test-support"] }

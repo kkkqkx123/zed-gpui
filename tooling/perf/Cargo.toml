@@ -2,7 +2,7 @@
 name = "perf"
 version = "0.1.0"
 publish = false
-edition.workspace = true
+edition = "2024"
 license = "Apache-2.0"
 description = "A tool for measuring Zed test performance, with too many Clippy lints"
 
@@ -25,10 +25,9 @@ missing_safety_doc = "forbid"
 disallowed_methods = { level = "allow", priority = 1}
 
 [dependencies]
-collections.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-
+collections = { path = "../../crates/collections", version = "0.1.0" }
+serde = { version = "1.0.221", features = ["derive", "rc"] }
+serde_json = { version = "1.0.144", features = ["preserve_order", "raw_value"] }
 [lib]
 test = false
 doctest = false

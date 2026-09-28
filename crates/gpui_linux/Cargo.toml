@@ -1,13 +1,26 @@
 [package]
 name = "gpui_linux"
 version = "0.1.0"
-edition.workspace = true
-publish.workspace = true
+edition = "2024"
+publish = false
 license = "Apache-2.0"
 
-[lints]
-workspace = true
+[lints.rust]
+unexpected_cfgs = { level = "allow" }
 
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+declare_interior_mutable_const = "deny"
+redundant_clone = "deny"
+disallowed_methods = "deny"
+style = { level = "allow", priority = -1 }
+type_complexity = "allow"
+let_underscore_future = "allow"
+single_range_in_vec_init = "allow"
+too_many_arguments = "allow"
+large_enum_variant = "allow"
+nonminimal_bool = "allow"
 [lib]
 path = "src/gpui_linux.rs"
 doctest = false
@@ -52,44 +65,41 @@ screen-capture = [
 
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
-accesskit.workspace = true
-accesskit_unix.workspace = true
-anyhow.workspace = true
+accesskit = { version = "0.24.0", features = ["enumn"] }
+accesskit_unix = { version = "0.22" }
+anyhow = { version = "1.0.86" }
 bytemuck = "1"
-collections.workspace = true
-futures.workspace = true
-gpui.workspace = true
-gpui_util.workspace = true
-gpui_wgpu = { workspace = true, optional = true, features = ["font-kit"] }
-http_client.workspace = true
-libc.workspace = true
-log.workspace = true
-parking_lot.workspace = true
-smallvec.workspace = true
-smol.workspace = true
-strum.workspace = true
-url.workspace = true
-uuid.workspace = true
-
+collections = { path = "../collections", version = "0.1.0" }
+futures = { version = "0.3.34" }
+gpui = { path = "../gpui", default-features = false }
+gpui_util = { path = "../gpui_util" }
+gpui_wgpu = { path = "../gpui_wgpu", optional = true, features = ["font-kit"] }
+http_client = { path = "../http_client" }
+libc = { version = "0.2" }
+log = { version = "0.4.16", features = ["kv_unstable_serde", "serde"] }
+parking_lot = { version = "0.12.1" }
+smallvec = { version = "1.6", features = ["union", "const_new"] }
+smol = { version = "2.0" }
+strum = { version = "0.28", features = ["derive"] }
+url = { version = "2.2" }
+uuid = { version = "1.1.2", features = ["v4", "v5", "v7", "serde"] }
 # Always used
 oo7 = { version = "0.6", default-features = false, features = [
     "async-std",
     "native_crypto",
 ] }
 calloop = "0.14.3"
-notify-rust.workspace = true
-raw-window-handle.workspace = true
-
+notify-rust = { version = "4" }
+raw-window-handle = { version = "0.6" }
 # Used in both windowing options
-ashpd = { workspace = true, optional = true }
-bitflags = { workspace = true, optional = true }
+ashpd = { version = "0.13", default-features = false, features = ["async-io", "inhibit", "notification", "open_uri", "file_chooser", "settings", "trash"], optional = true }
+bitflags = { version = "2.6.0", optional = true }
 filedescriptor = { version = "0.8.2", optional = true }
 open = { version = "5.2.0", optional = true }
 xkbcommon = { version = "0.8.0", default-features = false, optional = true }
 
 # Screen capture
-scap = { workspace = true, optional = true }
-
+scap = { git = "https://github.com/zed-industries/scap", rev = "4afea48c3b002197176fb19cd0f9b180dd36eaac", default-features = false, package = "zed-scap", version = "0.0.8-zed", optional = true }
 # Wayland
 calloop-wayland-source = { version = "0.4.1", optional = true }
 wayland-backend = { version = "0.3.15", features = [
@@ -131,7 +141,6 @@ xim = { git = "https://github.com/zed-industries/xim-rs.git", rev = "16f35a2c881
 x11-clipboard = { version = "0.9.3", optional = true }
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dev-dependencies]
-gpui = { workspace = true, features = ["test-support"] }
-
+gpui = { path = "../gpui", default-features = false, features = ["test-support"] }
 [package.metadata.cargo-shear]
 ignored = ["bitflags", "scap", "x11-clipboard"]
