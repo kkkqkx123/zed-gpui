@@ -1,48 +1,46 @@
-# Zed
+> [!IMPORTANT]
+> Remove this line to confirm you've reviewed this PR before submitting.
 
-[![Zed](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/zed-industries/zed/main/assets/badge/v0.json)](https://zed.dev)
-[![CI](https://github.com/zed-industries/zed/actions/workflows/run_tests.yml/badge.svg)](https://github.com/zed-industries/zed/actions/workflows/run_tests.yml)
+# zed-gpui (gpui 分支)
 
-Welcome to Zed, a high-performance, multiplayer code editor from the creators of [Atom](https://github.com/atom/atom) and [Tree-sitter](https://github.com/tree-sitter/tree-sitter).
+本仓库是 [zed-industries/zed](https://github.com/zed-industries/zed) 的裁剪 fork。`gpui` 分支只保留 GPUI UI 框架及其直接依赖,用于独立开发、优化和基准测试 GPUI;`main` 分支保持与上游一致,作为同步基准。
 
----
+## 分支结构
 
-### Installation
+| 分支 | 内容 |
+|---|---|
+| `main` | 上游 `zed-industries/zed` main 的镜像,无本地提交 |
+| `gpui` | 在 main 之上叠加裁剪提交,仅保留 GPUI 相关 crate |
 
-On macOS, Linux, and Windows you can [download Zed directly](https://zed.dev/download) or install Zed via your local package manager ([macOS](https://zed.dev/docs/installation#macos)/[Linux](https://zed.dev/docs/linux#installing-via-a-package-manager)/[Windows](https://zed.dev/docs/windows#package-managers)).
+裁剪后的工作区(见根 `Cargo.toml` 的 `members`):
 
-Other platforms are not yet available:
+- **GPUI 核心**:`crates/gpui`、`gpui_macros`、`gpui_platform` 及各平台后端(`gpui_linux`、`gpui_macos`、`gpui_windows`、`gpui_apple`、`gpui_web`、`gpui_wgpu`、`gpui_tokio`、`gpui_shared_string`)
+- **基础库**:`collections`、`sum_tree`、`util`、`util_macros`、`refineable`、`path`、`scheduler`、`zlog`、`ztracing`(+ macro)、`bench_metrics`
+- **网络与设置**:`http_client`、`http_client_tls`、`reqwest_client`、`settings`、`settings_content`、`settings_ui`
+- **保留的上层示例**:`theme`、`ui`、`sidebar`、`language`、`editor`、`agent_ui` 等(作为 GPUI 的真实使用方,用于回归验证)
+- **工具**:`tooling/perf`(`util_macros` 依赖)
 
-- Web ([tracking discussion](https://github.com/zed-industries/zed/discussions/26195))
+`default-members = ["crates/gpui"]`,直接 `cargo build` / `cargo check` 只构建 gpui。
 
-### Developing Zed
+## 常用命令
 
-- [Building Zed for macOS](./docs/src/development/macos.md)
-- [Building Zed for Linux](./docs/src/development/linux.md)
-- [Building Zed for Windows](./docs/src/development/windows.md)
+```bash
+cargo check -p gpui      # 检查 gpui 本体
+cargo test -p gpui       # 运行 gpui 测试
+./script/clippy          # clippy(上游脚本,如已裁剪则用 cargo clippy)
+```
 
-### Contributing
+## 与上游同步
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for ways you can contribute to Zed.
+如需代理,先手动设置环境变量(例如 `export https_proxy=http://localhost:7890 http_proxy=http://localhost:7890`),然后运行:
 
-Also... we're hiring! Check out our [jobs](https://zed.dev/jobs) page for open roles.
+```bash
+scripts/sync-main.sh     # main fast-forward 到上游
+scripts/sync-gpui.sh     # gpui merge 上游,modify/delete 冲突自动保留删除
+```
 
-### Licensing
+详细说明见 [docs/dev/branch-sync.md](docs/dev/branch-sync.md)。
 
-Zed source code is licensed primarily under GPL-3.0-or-later, with Apache-2.0 components where marked.
+## 许可证
 
-License information for third party dependencies must be correctly provided for CI to pass.
-
-We use [`cargo-about`](https://github.com/EmbarkStudios/cargo-about) to automatically comply with open source licenses. If CI is failing, check the following:
-
-- Is it showing a `no license specified` error for a crate you've created? If so, add `publish = false` under `[package]` in your crate's Cargo.toml.
-- Is the error `failed to satisfy license requirements` for a dependency? If so, first determine what license the project has and whether this system is sufficient to comply with this license's requirements. If you're unsure, ask a lawyer. Once you've verified that this system is acceptable add the license's SPDX identifier to the `accepted` array in `script/licenses/zed-licenses.toml`.
-- Is `cargo-about` unable to find the license for a dependency? If so, add a clarification field at the end of `script/licenses/zed-licenses.toml`, as specified in the [cargo-about book](https://embarkstudios.github.io/cargo-about/cli/generate/config.html#crate-configuration).
-
-## Sponsorship
-
-Zed is developed by **Zed Industries, Inc.**, a for-profit company.
-
-If you’d like to financially support the project, you can do so via GitHub Sponsors.
-Sponsorships go directly to Zed Industries and are used as general company revenue.
-There are no perks or entitlements associated with sponsorship.
+本仓库沿用上游 Zed 的许可证:`LICENSE-APACHE`(Apache-2.0)与 `LICENSE-GPL`(GPL v3)。各 crate 目录内保留各自的 `LICENSE-APACHE` 副本,`crates/gpui` 的 `Cargo.toml` 声明 `license = "Apache-2.0"`。裁剪未改动任何许可证条款,单独使用 gpui 时遵循 Apache-2.0 即可。
