@@ -3,14 +3,17 @@
 
 # zed-gpui (gpui 分支)
 
-本仓库是 [zed-industries/zed](https://github.com/zed-industries/zed) 的裁剪 fork。`gpui` 分支只保留 GPUI UI 框架及其直接依赖,用于独立开发、优化和基准测试 GPUI;`main` 分支保持与上游一致,作为同步基准。
+本仓库是 [zed-industries/zed](https://github.com/zed-industries/zed) 的裁剪 fork,只保留 GPUI UI 框架及其直接依赖,用于独立开发、优化和基准测试 GPUI。
 
-## 分支结构
+**使用者请检出 `lean` 分支**(仓库默认分支):它是 gpui 工作内容的树快照链,不含上游 zed 的完整历史,克隆与拉取的开销极小。
+
+维护者使用的分支:
 
 | 分支 | 内容 |
 |---|---|
 | `main` | 上游 `zed-industries/zed` main 的镜像,无本地提交 |
 | `gpui` | 在 main 之上叠加裁剪提交,仅保留 GPUI 相关 crate |
+| `lean` | gpui 的树快照链(对外使用),详细模型见 [docs/dev/branch-sync.md](docs/dev/branch-sync.md) |
 
 裁剪后的工作区(见根 `Cargo.toml` 的 `members`):
 
