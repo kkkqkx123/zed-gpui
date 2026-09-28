@@ -1,7 +1,4 @@
-> [!IMPORTANT]
-> Remove this line to confirm you've reviewed this PR before submitting.
-
-# zed-gpui (gpui 分支)
+# zed-gpui
 
 本仓库是 [zed-industries/zed](https://github.com/zed-industries/zed) 的裁剪 fork,只保留 GPUI UI 框架及其直接依赖,用于独立开发、优化和基准测试 GPUI。
 
