@@ -1,0 +1,60 @@
+# zed-gpui (gpui 分支) 仓库说明
+
+本仓库是 zed-industries/zed 的裁剪 fork,只保留 GPUI UI 框架及其直接依赖。使用者请检出 `lean` 分支(默认分支,树快照链,无上游完整历史);维护者工作流使用 `main` 与 `gpui`。
+
+## 分支与远程
+
+- `main` — 上游 `zed-industries/zed` main 的镜像,不含本地提交,始终 fast-forward。
+- `gpui` — 工作分支,基于 main 叠加裁剪提交,含完整上游合并历史。
+- `lean` — gpui 的树快照链(孤儿根起点的线性单父提交),推送到 origin 供使用者克隆;每次同步或本地开发完成后用 `scripts/publish-lean.sh` 发布。
+- `origin` — `https://github.com/kkkqkx123/zed-gpui`(fork)
+- `upstream` — `https://github.com/zed-industries/zed`(上游;同步脚本会幂等添加)
+- 如需代理,拉取远程前手动设置环境变量(如 `export https_proxy=http://localhost:7890 http_proxy=http://localhost:7890`)。
+
+## Git 操作指导
+
+### 与上游同步
+
+```bash
+scripts/sync-main.sh           # main fast-forward 到 upstream/main
+scripts/sync-main.sh --push    # 同步后推送 origin/main
+scripts/sync-gpui.sh           # gpui merge upstream/main
+scripts/sync-gpui.sh --push    # 同步后推送 origin/gpui
+scripts/sync-gpui.sh --manual  # 遇到冲突停下手动处理
+scripts/publish-lean.sh        # 把 gpui 当前树发布为 lean 的下一个快照
+scripts/publish-lean.sh --push # 发布后推送到 origin/lean
+```
+
+### 冲突处理
+
+gpui 分支的裁剪提交与上游的冲突几乎全是 **modify/delete** 类型(本分支删除的文件被上游改动)。默认策略是**保留删除**(`git merge -X d`),维持裁剪决策:
+
+```bash
+git rm <path>          # 保留删除(默认做法)
+git checkout upstream/main -- <path>   # 个别文件确需恢复时,单独恢复并提交
+```
+
+内容冲突(仅出现在 gpui 裁剪提交触碰过的文件,如 `crates/gpui/` 下)正常裁决即可。
+
+### 日常操作建议
+
+1. 先同步 main,再同步 gpui(顺序见 `docs/dev/branch-sync.md`)。
+2. 冲突解决后检查 `git log -1 --stat`,确认合并内容符合预期。
+3. 验证 `cargo check -p gpui` 通过后再推送。
+4. gpui 上的新功能提交尽量独立、小步,避免与裁剪提交混杂,降低后续合并冲突面。
+
+## 裁剪后工作区
+
+- GPUI 核心:`crates/gpui`、`gpui_macros`、`gpui_platform` 及平台后端(`gpui_linux`、`gpui_macos`、`gpui_windows`、`gpui_apple`、`gpui_web`、`gpui_wgpu`、`gpui_tokio`、`gpui_shared_string`)
+- 基础库:`collections`、`sum_tree`、`util`、`util_macros`、`refineable`、`path`、`scheduler`、`zlog`、`ztracing`(含 macro)、`bench_metrics`
+- 网络/设置:`http_client`、`http_client_tls`、`reqwest_client`、`settings`、`settings_content`、`settings_ui`
+- 保留的上层使用方(回归验证用):`theme`、`ui`、`sidebar`、`language`、`editor`、`agent_ui` 等
+- 工具:`tooling/perf`(`util_macros` 依赖,勿删)、`.cargo/config.toml`(必需 rustflags,勿删)
+
+`default-members = ["crates/gpui"]`,根目录直接 `cargo check` / `cargo build` / `cargo test` 即针对 gpui。
+
+## 注意事项
+
+- 不要删除 `tooling/perf` 与 `.cargo/config.toml`,它们分别被 `util_macros` 依赖和提供必需编译配置。
+- `assets/` 目录已无跟踪文件;`crates/gpui` 等代码中通过 `AssetSource` 加载字体,examples 自带字体,不依赖仓库级 assets。
+- 许可证沿用上游:`LICENSE-APACHE`(Apache-2.0)与 `LICENSE-GPL`,各 crate 内保留副本,`crates/gpui` 声明 `license = "Apache-2.0"`。
