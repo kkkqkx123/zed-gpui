@@ -6,7 +6,7 @@
 |---|---|---|
 | `main` | 与上游 `zed-industries/zed` main 保持一致,不含本地提交 | `origin/main` |
 | `gpui` | 在 main 之上叠加裁剪提交(裁掉 editor/agent 等非 GPUI 相关代码),含完整上游合并历史 | `origin/gpui` |
-| `lean` | gpui 的树快照链:孤儿根起点的线性单父提交,克隆使用者应使用的分支 | `origin/lean` |
+| `lean` | gpui 的**展开后**树快照链:孤儿根起点的线性单父提交,克隆使用者应使用的分支 | `origin/lean` |
 
 远程配置:
 
@@ -23,6 +23,32 @@ gpui 与上游共享全部历史(4 万+ 提交,`.git` ~800MB)。若使用者克�
 - 每次同步完成后,运行 `scripts/publish-lean.sh`,用 `git commit-tree` 把 gpui 当前的**树**生成为 lean 上的一个单父快照提交;
 - lean 的根提交是孤儿提交,不引用任何上游历史对象;git 对未变化的 blob/tree 自动去重,克隆与后续增量拉取只传输裁剪后且实际变化的内容;
 - 将 lean 设为 GitHub 默认分支后,使用者克隆/拉取默认只下载 lean,不接触上游完整历史。
+
+### 为什么 lean 还要展开工作区继承
+
+使用者把本仓库作为 **submodule** 引入,再通过 `path` 依赖引用 `crates/gpui` 等 crate:
+
+```toml
+[dependencies]
+gpui = { path = "crates/vendor/zed-gpui/crates/gpui" }
+```
+
+Cargo 解析工作区继承(`dep.workspace = true`、`edition.workspace = true`、`lints.workspace = true`)时,会向上找到**使用者构建的工作区根**,并越过 path 依赖所在的仓库边界继续上溯。也就是说,只要 `crates/gpui/Cargo.toml` 里还有一个 `workspace = true`,`cargo` 就会去使用者的工作区里找 `[workspace.dependencies]`——使用者被迫重建本仓库的工作区表才能编译。仓库内再嵌套一个 `[workspace]` 也**不能**阻止这种上溯。
+
+因此 `publish-lean.sh` 在生成快照时调用 `scripts/expand-workspace.py`,把每个 crate 的继承项改写成展开形式:
+
+- `edition.workspace = true` → `edition = "2024"`
+- `serde = { workspace = true, optional = true }` → 带回版本/path/features 的完整定义
+- `[lints] workspace = true` → 展开成 `[lints.rust]`、`[lints.clippy]` 等具体表
+- 工作区里的 `path` 是相对**仓库根**的,展开时按 crate 实际深度重算(如 `path = "../bench_metrics"`)
+
+展开后每个 crate 自带完整依赖定义,使用者直接用 path 依赖即可编译,无需任何额外配合。原树文本只存在于 `gpui` 分支,所以与上游的合并冲突面保持在裁剪提交的规模,只有生成物 `lean` 带展开。
+
+需要看展开结果而不动分支时:
+
+```bash
+scripts/publish-lean.sh --dry-run   # 只构建快照树并打印清单,不移动 lean
+```
 
 网络要求:如需代理,在运行脚本前手动设置环境变量,例如:
 
@@ -61,11 +87,14 @@ scripts/sync-gpui.sh --push      # 同步后推送 origin/gpui
 ### `scripts/publish-lean.sh`
 
 ```bash
-scripts/publish-lean.sh          # 把 gpui 当前树发布为 lean 的下一个快照
-scripts/publish-lean.sh --push   # 发布后推送到 origin/lean
+scripts/publish-lean.sh            # 把 gpui 当前树展开并发布为 lean 的下一个快照
+scripts/publish-lean.sh --push     # 发布后推送到 origin/lean
+scripts/publish-lean.sh --dry-run  # 只构建并打印快照树,不移动 lean
 ```
 
-在 `sync-gpui.sh`(或本地开发提交)完成后运行。lean 无变化时脚本是幂等的(直接跳过)。
+在 `sync-gpui.sh`(或本地开发提交)完成后运行。脚本流程:导出 `gpui` 树 → 运行
+`scripts/expand-workspace.py` 展开工作区继承 → 用临时索引把展开结果写成新树 →
+`git commit-tree` 生成单父快照。lean 无变化时脚本是幂等的(树哈希一致则直接跳过)。
 
 ## 冲突处理
 
@@ -88,13 +117,19 @@ git add <path>       # 恢复文件(接受上游版本)
 1. 先同步 main:`scripts/sync-main.sh`
 2. 再同步 gpui:`scripts/sync-gpui.sh`
 3. 冲突解决后,确认合并提交包含预期改动:`git log -1 --stat`
-4. 验证裁剪后仓库仍可构建(至少 `cargo check -p gpui`)
-5. 发布快照并推送:`scripts/publish-lean.sh --push`
+4. 验证裁剪后仓库仍可构建(至少 `cargo check -p gpui`;未展开的 `gpui` 分支在本仓库内构建正常,因为工作区根就在本仓库)
+5. 发布快照并推送:`scripts/publish-lean.sh --push`(发布前可先 `--dry-run` 看清单)
 
 ## 常见问题
 
 **Q: 为什么不用 rebase 让 gpui 始终只差一个提交?**
 rebase 裁剪提交会重放对上千个文件的删除操作,与上游冲突概率高、且每次 rebase 后 fork 需强推。merge 保留历史、冲突面小,适合长期维护。
+
+**Q: 使用者的仓库里也要放 `[workspace.dependencies]` 吗?**
+不需要。lean 里的每个 crate 都是自包含的,使用者只写 path 依赖即可。如果使用者遇到 `error inheriting ... from workspace root manifest`,说明引用的是未展开的 `gpui` 分支而非 `lean`,或该 crate 的继承项未被展开(检查 `expand-workspace.py` 的 `unresolved` 输出)。
+
+**Q: 新增 crate 时要改脚本吗?**
+不用。`expand-workspace.py` 遍历 `crates/` 与 `tooling/` 下所有带 `[package]` 的 manifest,自动发现新 crate。但若引入**新的继承形式**(如新的 `xxx.workspace = true` 字段),需在脚本的 `expand_*` 函数中补充处理;脚本会在遇到未解析的依赖名时报错退出,不会静默产出错误快照。
 
 **Q: 网络不通怎么办?**
 脚本会因 fetch 失败而中止(set -euo pipefail)。如需代理,运行前手动 `export https_proxy=... http_proxy=...`。
